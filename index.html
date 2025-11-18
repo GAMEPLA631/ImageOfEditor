@@ -487,6 +487,13 @@
             const hasImage = !!originalImageUrl;
             downloadButton.disabled = !hasImage;
             resetButton.disabled = !hasImage;
+            
+            // NOVÁ LOGIKA: Zakázať/Povoliť všetky posúvače (sliders)
+            const rangeInputs = filterButtonsContainer.querySelectorAll('input[type="range"]');
+            rangeInputs.forEach(input => {
+                input.disabled = !hasImage;
+            });
+
             // Len zmena opacity pre vizuálny efekt, nie pre funkčnosť
             filterButtonsContainer.style.opacity = hasImage ? '1' : '0.5'; 
             noImageMessage.style.display = hasImage ? 'none' : 'block';
@@ -498,4 +505,3 @@
 
 </body>
 </html>
-
