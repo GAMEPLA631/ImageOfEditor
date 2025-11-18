@@ -142,7 +142,8 @@
             { name: "Sýtosť (Saturation)", camanName: "saturation", type: "slider", min: -100, max: 100, step: 5, defaultValue: 0 },
             { name: "Vibrácia (Vibrance)", camanName: "vibrance", type: "slider", min: -100, max: 100, step: 5, defaultValue: 0 },
             { name: "Odtieň (Hue)", camanName: "hue", type: "slider", min: 0, max: 100, step: 5, defaultValue: 0 },
-            { name: "Červený Kanál (Red Channel)", camanName: "channels.red", type: "slider", min: -100, max: 100, step: 5, defaultValue: 0 }, // NOVÝ: Pre selektívnu úpravu červenej
+            // Nový posúvač pre selektívnu úpravu červenej
+            { name: "Červený Kanál (Red Channel)", camanName: "channels.red", type: "slider", min: -100, max: 100, step: 5, defaultValue: 0 }, 
             { name: "Expozícia (Exposure)", camanName: "exposure", type: "slider", min: -100, max: 100, step: 5, defaultValue: 0 },
             { name: "Gama (Gamma)", camanName: "gamma", type: "slider", min: 0.1, max: 10, step: 0.1, defaultValue: 1.0 },
             { name: "Orezanie (Clip)", camanName: "clip", type: "slider", min: 0, max: 100, step: 1, defaultValue: 0 },
@@ -152,7 +153,8 @@
 
             // --- Brutálne Prednastavenia (Kombinácie filtrov) ---
             { name: "Tma 🌑 (Darkness - Hlboká tma)", camanName: "preset", type: "button", effect: [["contrast", -100], ["brightness", -50], ["saturation", -20]] },
-            { name: "Temná Červená Žiara 🔴 (Dark Red Glow)", camanName: "preset", type: "button", effect: [["brightness", -70], ["contrast", 80], ["channels.red", 80], ["channels.green", -40], ["channels.blue", -40], ["noise", 5]] }, // NOVÝ: Efekt Temnej Žiary
+            // Nový efekt Temnej Červenej Žiary, kde červená žiari v tme
+            { name: "Temná Červená Žiara 🔴 (Dark Red Glow)", camanName: "preset", type: "button", effect: [["brightness", -70], ["contrast", 80], ["channels.red", 80], ["channels.green", -40], ["channels.blue", -40], ["noise", 5]] }, 
             { name: "Nočný Pohľad (Night Vision)", camanName: "preset", type: "button", effect: [["greyscale"], ["contrast", 50], ["channels.green", 100]] },
             { name: "Krvavá Červená 🩸 (Bloody Red)", camanName: "preset", type: "button", effect: [["saturation", -50], ["channels.red", 100], ["exposure", 20]] },
             { name: "Kyberpunk (Cyberpunk Glitch)", camanName: "preset", type: "button", effect: [["sepia", 80], ["channels.blue", 70], ["contrast", 40], ["noise", 5]] },
@@ -218,7 +220,7 @@
                 <div class="text-red-500">
                     <svg class="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     <p class="text-xl font-medium">Chyba Načítania Knižnice!</p>
-                    <p class="mt-2 text-sm text-gray-400">Externá knižnica (CamanJS) sa nenačítala. Ako ste správne uviedli, ide pravdepodobne o problém so serverom (CDN) alebo sieťovým pripojením. Pre pokračovanie musíte obnoviť stránku.</p>
+                    <p class="mt-2 text-sm text-gray-400">Externá knižnica (CamanJS) sa nenačítala. Pravdepodobne ide o problém so serverom (CDN) alebo sieťovým pripojením. Pre pokračovanie musíte obnoviť stránku.</p>
                 </div>
             `;
             // Zablokovať hlavný vstup
@@ -257,8 +259,7 @@
                 // Zobraziť plátno
                 imageCanvas.style.display = 'block';
 
-                // CamanJS inicializácia. Caman potrebuje ID canvasu alebo <img> tag.
-                // Resetovať ak už existuje inštancia
+                // CamanJS inicializácia.
                 if (camanInstance) {
                     Caman.remove(imageCanvas);
                     camanInstance = null;
@@ -274,8 +275,7 @@
                     Caman(imageCanvas, originalImageUrl, function () {
                         camanInstance = this;
                         camanInstance.render(function() {
-                            // Uložiť počiatočný stav. Toto postačuje pre funkciu revert().
-                            // Toto rieši problém s chýbajúcou funkciou setOriginalImage.
+                            // Uložiť počiatočný stav. Je kľúčové pre funkciu revert().
                             camanInstance.save(); 
                             
                             currentFilter = '';
@@ -302,7 +302,8 @@
             toggleLoading(true);
             currentFilter = filter;
 
-            // Resetovať, aby sme aplikovali filter na pôvodný stav
+            // Resetovať na pôvodný stav pred aplikáciou nového filtra
+            // 'false' znamená, že sa neobnoví stav z 'save()', ale len sa vyčistia aktuálne filtre.
             camanInstance.revert(false);
 
             if (filter === 'preset') {
@@ -322,7 +323,7 @@
                     }
                 });
             } else if (filter === 'reset') {
-                // Tlačidlo Reset už používa revert()
+                // Akcia resetu
                 currentFilter = '';
             } else {
                 // Aplikácia jedného filtra (s hodnotou alebo bez)
@@ -366,20 +367,23 @@
                         // Slider pre základné úpravy
                         const sliderDiv = document.createElement('div');
                         sliderDiv.className = 'p-3 bg-gray-700 rounded-lg shadow-inner';
+                        
+                        // ID pre slider a hodnotu musí nahradiť bodku podčiarkovníkom (napr. channels_red)
+                        const safeId = filter.camanName.replace('.', '_');
+
                         sliderDiv.innerHTML = `
-                            <label for="${filter.camanName}Slider" class="text-sm font-medium block mb-1 text-yellow-300">${filter.name} (<span id="${filter.camanName.replace('.', '_')}Value">${filter.defaultValue}</span>)</label>
-                            <input type="range" id="${filter.camanName.replace('.', '_')}Slider" min="${filter.min}" max="${filter.max}" step="${filter.step}" value="${filter.defaultValue}" class="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer">
+                            <label for="${safeId}Slider" class="text-sm font-medium block mb-1 text-yellow-300">${filter.name} (<span id="${safeId}Value">${filter.defaultValue}</span>)</label>
+                            <input type="range" id="${safeId}Slider" min="${filter.min}" max="${filter.max}" step="${filter.step}" value="${filter.defaultValue}" class="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer">
                         `;
                         contentDiv.appendChild(sliderDiv);
 
-                        // Používame upravené ID pre DOM element
-                        const slider = sliderDiv.querySelector(`#${filter.camanName.replace('.', '_')}Slider`);
-                        const valueSpan = sliderDiv.querySelector(`#${filter.camanName.replace('.', '_')}Value`);
+                        const slider = sliderDiv.querySelector(`#${safeId}Slider`);
+                        const valueSpan = sliderDiv.querySelector(`#${safeId}Value`);
 
-                        // Zmena: Používame len 'input' pre priebežnú aplikáciu
+                        // Používame len 'input' pre priebežnú aplikáciu
                         slider.addEventListener('input', (e) => {
                             valueSpan.textContent = e.target.value;
-                            // Aplikovať filter priebežne, ale len ak existuje inštancia
+                            // Aplikovať filter priebežne
                             if (camanInstance) {
                                 applyFilter(filter.camanName, parseFloat(e.target.value));
                             } else {
@@ -393,9 +397,8 @@
                         button.textContent = filter.name;
                         button.className = 'filter-button w-full py-2 px-3 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700';
                         button.addEventListener('click', () => {
-                            // Resetovať všetky slidery na default
+                            // Resetovať všetky slidery na default pri aplikácii prednastavenia
                             document.querySelectorAll('input[type="range"]').forEach(slider => {
-                                // Musíme použiť ID s podčiarkovníkom pre nájdenie elementu
                                 const filterNameWithUnderscore = slider.id.replace('Slider', '');
                                 
                                 // Nájdeme originálny filter podľa jeho camanName (ktoré môže obsahovať bodku)
@@ -453,6 +456,7 @@
             });
             
             // Vrátiť sa k pôvodnému stavu (predvolené z CamanJS)
+            // Používame revert(false) na vymazanie aplikovaných filtrov a následné vykreslenie
             camanInstance.revert(false);
             camanInstance.render(function() {
                 currentFilter = '';
@@ -494,3 +498,4 @@
 
 </body>
 </html>
+
